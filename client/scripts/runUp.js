@@ -365,7 +365,7 @@ function runUp(frame,data){
 				return a.dist - b.dist;
 			})[0];
 
-			if(point.dist > 60){
+			if(point.dist > 50){
 				anchor.html('');
 				context2.clearRect(0,0,(plotW * devicePixelRatio),(plotH * devicePixelRatio));
 			}else{
