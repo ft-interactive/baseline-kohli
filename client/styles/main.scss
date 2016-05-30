@@ -152,6 +152,7 @@ svg {
         opacity:0.8;
         padding:8px;
         border-radius:5px;
+        margin:5px;
     }
 }
 
@@ -165,7 +166,7 @@ svg {
     font-family:$font-sans;
 }
 
-#runPos, #downPos {
+#runPos, #downPos, #scatters {
     max-width:1050px;
 }
 
@@ -176,14 +177,17 @@ svg {
 .o-grid-row > div{
     -webkit-margin-after: 0.4em;
     margin:0 auto;
-    > div {
+    > div.white {
         background-color:#fff;
         border-radius:5px;
         
     }
     padding:0.5em;
     span {
-        margin-left:8px;
+        margin-left:0px;
+        display: block;
+        line-height: 1.1em;
+        margin-bottom: 0.5em;
     }
 }
 
@@ -234,6 +238,7 @@ span.footnote{
 .chartOverlay{font-size:12px;font-weight:bold;fill:#9d9d98;text-shadow:3px 3px 2px #FFF1E0, -3px -3px 2px #FFF1E0, -3px 3px 2px #FFF1E0, 3px -3px 2px #FFF1E0, -3px 0px 2px #FFF1E0, 3px 0px 2px #FFF1E0;}
 .shadow{text-shadow:3px 3px 2px #FFF1E0, -3px -3px 2px #FFF1E0, -3px 3px 2px #FFF1E0, 3px -3px 2px #FFF1E0, -3px 0px 2px #FFF1E0, 3px 0px 2px #FFF1E0;text-rendering:geometricPrecision}
 .shadow.light{text-shadow:3px 3px 2px #FFF8F0, -3px -3px 2px #FFF8F0, -3px 3px 2px #FFF8F0, 3px -3px 2px #FFF8F0, -3px 0px 2px #FFF8F0, 3px 0px 2px #FFF8F0;text-rendering:geometricPrecision}
+.shadow.fine{text-shadow:1px 1px 1px #FFF1E0, -1px -1px 1px #FFF1E0, -1px 1px 1px #FFF1E0, 1px -1px 1px #FFF1E0, -1px 0px 1px #FFF1E0, 1px 0px 1px #FFF1E0;text-rendering:geometricPrecision}
 
 .anno text {
     font-size:14px;

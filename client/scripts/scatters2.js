@@ -55,14 +55,14 @@ function wrap(text, width, lineheight) {
   });
 }
 
-function runUp(frame,data){
+function scatters2(frame,data){
 
 	var	bounds = frame.node().getBoundingClientRect(),
 		width = bounds.width-20,
 		height = d3.min([bounds.width*0.8,window.innerHeight]),
 		// height = bounds.height,
 		M = {T:0, B:0, L:0, R:0},
-		pM = { T:40, L:27, B:35, R:0, G:0 },
+		pM = { T:42, L:15, B:40, R:10, G:0 },
         titleText = '',
         subTitleText = '',
         // parseDate = d3.time.format("%Y-%m-%d").parse,
@@ -70,6 +70,8 @@ function runUp(frame,data){
         ;
 
     frame.html('');
+
+    frame.append('span').html('Strike rate and traditional batting average, over&nbsp;time');
 
     var viz = frame.append('div').attr({
         'id':'viz'
@@ -83,8 +85,8 @@ function runUp(frame,data){
         'id':'graphic'
     })
     .style({
-        'width':width,
-        'height':height
+        'width':width + 'px',
+        'height':height + 'px'
     });
 
     var canvasHolder = viz.append('div.canvasHolder');
@@ -93,8 +95,8 @@ function runUp(frame,data){
         'id':'svgTop'
     })
     .style({
-        'width':width,
-        'height':height
+        'width':width + 'px',
+        'height':height + 'px'
     });
 
     var defs = svgTop.append('defs');
@@ -106,7 +108,18 @@ function runUp(frame,data){
 	    .attr('markerHeight', 15)
 	    .attr('orient', 'auto')
 	  	.append('path')
-	    .attr('d', 'M-9.75,-4.75 L -1,0 L -9.75,4.75');
+	    .attr('d', 'M-9.75,-4.75 L -1,0 L -9.75,4.75')
+	    .style('fill','#43423e');
+
+    svgTop.append('marker')
+	    .attr('id', 'arrowNull')
+	    .attr('viewBox', '-10 -10 20 20')
+	    .attr('markerWidth', 10)
+	    .attr('markerHeight', 10)
+	    .attr('orient', 'auto')
+	  	.append('path')
+	    .attr('d', 'M-9.75,-4.75 L -1,0 L -9.75,4.75')
+	    .style('fill','#43423e');
 
     var chartHolder = svg.append('g').attr({
 		'id':'chartHolder',
@@ -121,26 +134,24 @@ function runUp(frame,data){
     function drawChart(){
 
 		data =  data.map(function (d,i){return{
-				        running: +d.runningYr,
-				        played: +d.playedYr,
-				        runID: d.runID,
-				        Player: d.Player
-				    }
-				})
-		.filter(function(d){
-			return d.runID != 'CH Gayle-2016'
+		        Player: d.Player,
+		        year: +d.year,
+		        sr: +d.sr,
+		        ave: +d.ave,
+		        batAve: +d.batAve
+		    }
 		});
 
+		granular = JSON.parse(JSON.stringify(data));
+
 		data = d3.nest()
-		    .key(function(d) { return d.runID})
+		    .key(function(d) { return d.Player})
 		    .entries(data);
 
 		keys = [];
-                data.forEach(function(d,i){
-                	keys.push(d.key);
-                	d.max = d3.max(d.values,function(x){return x.running});
-                	d.played = d3.max(d.values,function(x){return x.played});
-                });
+        // data.forEach(function(d,i){
+        // 	keys.push(d.key);
+        // });
 
 		data = data.sort(function(a,b){
             	if(a.values[0].Player == 'V Kohli'){
@@ -156,11 +167,7 @@ function runUp(frame,data){
     			}
         	});
 
-		// console.log(keys,data);
-
-		// var highlight = ['V Kohli-2016','CH Gayle-2015','CH Gayle-2012','CH Gayle-2011','CH Gayle-2013'];
-		// var highlight = ['V Kohli','CH Gayle','AB de Villiers','DA Warner'];
-		var highlight = ['V Kohli','CH Gayle'];
+		var highlight = ['V Kohli','CH Gayle','AB de Villiers','DA Warner'];
 
 		// SCRIPTS TO GENERATE SMALL MULTIPLE HOLDERS IF REQUIRED
 	    var plotW = ((width-(M.L+M.R)))-(pM.G/2),
@@ -234,6 +241,16 @@ function runUp(frame,data){
     	var textColours = colours.copy();
     	textColours.range(['#9e2f50','#5ba928','#008094','#69c0f2','#a7b224','#bfb0b0','#3267b4','#f197bc','#a96565']);
 
+    	svgTop.selectAll('marker.coloured').data(highlight).enter().append('marker.coloured')
+		    .attr('id', function(d){return 'arrow' + (d.replace(/ /g,''))})
+		    .attr('viewBox', '-10 -10 20 20')
+		    .attr('markerWidth', 10)
+		    .attr('markerHeight', 10)
+		    .attr('orient', 'auto')
+		  	.append('path')
+		    .attr('d', 'M-9.75,-4.75 L -1,0 L -9.75,4.75')
+		    .style('fill',function(d){return colours(d)});
+
 		function drawLegend(shape){
 
         	var legend = chartHolder.append('g.legend').translate([0,pM.T-28]);
@@ -305,139 +322,152 @@ function runUp(frame,data){
 		drawLegend('line');
 
 		var y = d3.scale.linear()
-	            	.range([plotH-pM.B,pM.T])
-	            	.domain([0,1700]);
-	        	var ys = d3.svg.axis()
-	        		.orient("left")
-	        		.ticks(5)
-	        		.tickSize(-1*((plotW)))
-	        		// .tickFormat(d3.format("d"))
-	        		.scale(y);
-   				var ya = plots.append('g.axis.y')
-    			.translate([pM.L,0])
-    			.call(ys);
-				var yt = plots.append('text')
-    				.attr({
-					class:'y axis title',
-					x:0,
-					y:y(+plots.select('.y .tick:nth-last-of-type(1) text').html().replace(/\,/g,''))-28
-					})
-					// .html('Cumulative runs in a calendar year');
-					.tspans(['Cumulative runs in','a calendar year'])
+        	.range([plotH-pM.B,pM.T])
+        	.domain([10,99]);
+    	var ys = d3.svg.axis()
+    		.orient("left")
+    		.ticks(5)
+    		.tickSize(-1*((plotW)))
+    		// .tickFormat(d3.format("d"))
+    		.scale(y);
+			var ya = plots.append('g.axis.y')
+		.translate([pM.L,0])
+		.call(ys);
+		var yt = plots.append('text')
+			.attr({
+			class:'y axis title',
+			x:0,
+			y:y(+plots.select('.y .tick:nth-last-of-type(1) text').html().replace(/\,/g,''))-18
+			})
+			// .html('Cumulative runs in a calendar year');
+			.tspans(['Runs per wicket lost'])
 
-            	var x = d3.scale.linear()
-	            	.range([pM.L,plotW-(pM.L+pM.R)])
-	            	.domain([1,51]);
-	        	var xs = d3.svg.axis()
-	        		.orient("bottom")
-	        		// .ticks(5)
-	        		.tickValues([1,10,20,30,40,50])
-	        		.tickSize(5)
-	        		.tickFormat(d3.format("d"))
-	        		.scale(x);
-	    		var xa = plots.append('g.axis.x')
-	    			.translate([0,plotH-(pM.B)])
-	    			.call(xs);
-                d3.selectAll('g.axis.y .tick line')
-                	.style({
-                		stroke:'#e9decf',
-                		'stroke-dasharray':'2 2'
-                	});
-				var xt = plots.append('text')
-    				.attr({
-					class:'x axis title',
-					x:d3.mean(x.range()),
-					y:plotH-pM.B+28
-					})
-					.style({
-					'text-anchor':'middle'
-					})
-					.html('Matches played');
+    	var x = d3.scale.linear()
+        	.range([pM.L,plotW-(pM.L+pM.R)])
+        	.domain([80,190]);
+    	var xs = d3.svg.axis()
+    		.orient("bottom")
+    		.ticks(5)
+    		.tickSize(5)
+    		.tickFormat(d3.format("d"))
+    		.scale(x);
+		var xa = plots.append('g.axis.x')
+			.translate([0,plotH-(pM.B)])
+			.call(xs);
+        d3.selectAll('g.axis.y .tick line')
+        	.style({
+        		stroke:'#e9decf',
+        		'stroke-dasharray':'2 2'
+        	});
+		var xt = plots.append('text')
+			.attr({
+			class:'x axis title',
+			x:d3.mean(x.range()),
+			y:plotH-pM.B+28
+			})
+			.style({
+			'text-anchor':'middle'
+			})
+			.html('Strike rate');
 
-				d3.selectAll('.axis.y .tick text').attr({'dy':-2});
-				d3.selectAll('.axis.y .tick line').translate([-pM.L,0]);
-				d3.selectAll('.axis.y .tick').filter(function(d,i){return d==0}).selectAll('line').style({'stroke-dasharray':'none',stroke:'#74736c'});
+		d3.selectAll('.axis.y .tick text').attr({'dy':-2});
+		d3.selectAll('.axis.y .tick line').translate([-pM.L,0]);
+		d3.selectAll('.axis.y .tick').filter(function(d,i){return d==0}).selectAll('line').style({'stroke-dasharray':'none',stroke:'#74736c'});
 
-		var anchor = viz.append('div.anchor');
+		var anchor = viz.append('div.anchor')
+		.style({
+			// left:x(closest.sr) + 'px',
+			// top:y(closest.ave) + 'px',
+			left:pM.L + 'px',
+			top:y(+plots.select('.y .tick:nth-last-of-type(1) text').html().replace(/\,/g,'')) + 'px'
+		});
 
 		viz.on('mousemove', function(){
 			var coords = d3.mouse(viz.node());
 			var xExact = x.invert(coords[0]);
 			var yExact = y.invert(coords[1]);
-			// data.forEach(function(d,i){
-			// 	d.dist = Math.pow(Math.pow((d.played - xExact),2) + Math.pow((d.max - yExact),2),0.5);
-			// });
-			data.forEach(function(d,i){
-				d.dist = Math.pow(Math.pow((x(d.played) - coords[0]),2) + Math.pow((y(d.max) - coords[1]),2),0.5);
+			granular.forEach(function(d,i){
+				d.dist = Math.pow(Math.pow((x(d.sr) - coords[0]),2) + Math.pow((y(d.batAve) - coords[1]),2),0.5);
 			});
-			var point = data.sort(function(a,b){
+
+			var closest = granular.sort(function(a,b){
 				return a.dist - b.dist;
 			})[0];
 
-			if(point.dist > 50){
+			highlightPath(closest.Player);
+
+		// 	var point = data.sort(function(a,b){
+		// 		return a.dist - b.dist;
+		// 	})[0];
+
+			if(closest.dist > 50){
+				highlightPath('');
 				anchor.html('');
-				context2.clearRect(0,0,(plotW * devicePixelRatio),(plotH * devicePixelRatio));
+				// context2.clearRect(0,0,(plotW * devicePixelRatio),(plotH * devicePixelRatio));
 			}else{
 
-			anchor.html('')
+			d3.selectAll('#scatters .anchor').html('')
 			.style({
-				left:x(point.played) + 'px',
-				top:y(point.max) + 'px'
+				// left:x(closest.sr) + 'px',
+				// top:y(closest.ave) + 'px',
+				// left:pM.L + 'px',
+				// top:y(+plots.select('.y .tick:nth-last-of-type(1) text').html().replace(/\,/g,'')) + 'px'
 			})
 			.append('div.tooltip')
 			.style({
-				left:point.played > d3.mean(x.domain()) ? 'auto':0,
-				right:point.played > d3.mean(x.domain()) ? 0:'auto',
+				// left:closest.sr > d3.mean(x.domain()) ? 'auto':0,
+				// right:closest.sr > d3.mean(x.domain()) ? 0:'auto',
 			})
-			.html('<span style=font-weight:600>' + point.key.replace(/-/g,'<br>').replace(/ /g,'&nbsp;')+'</span><br><span style=font-size:0.9em>'+d3.format('.1f')(point.max/point.played) + '&nbsp;runs per&nbsp;innings</span>');
+			.html('<span style=font-weight:600>' + closest.Player.replace(/-| /g,'&nbsp;'));
 
-			context2.clearRect(0,0,(plotW * devicePixelRatio),(plotH * devicePixelRatio));
+		// 	context2.clearRect(0,0,(plotW * devicePixelRatio),(plotH * devicePixelRatio));
 
-			context2.strokeStyle = '#fff1e0';
-			context2.lineWidth = point.values[0].Player in oc(highlight) ? 8:6;
-			context2.beginPath();
-			context2.lineCap == 'round';
-			point.values.forEach(function(a,b){
-				if(b==0 || a==(point.values.length-1)){
-					context2.moveTo(x(a.played), y(a.running))
-				}else{
-					var prev = point.values[(b-1)];
-					context2.lineTo(x(a.played), y(prev.running));
-					context2.lineTo(x(a.played), y(a.running));
-				}
-			});
-			context2.stroke();
-   			context2.closePath();
+		// 	context2.strokeStyle = '#fff1e0';
+		// 	context2.lineWidth = point.values[0].Player in oc(highlight) ? 8:6;
+		// 	context2.beginPath();
+		// 	context2.lineCap == 'round';
+		// 	point.values.forEach(function(a,b){
+		// 		if(b==0 || a==(point.values.length-1)){
+		// 			context2.moveTo(x(a.played), y(a.running))
+		// 		}else{
+		// 			var prev = point.values[(b-1)];
+		// 			context2.lineTo(x(a.played), y(prev.running));
+		// 			context2.lineTo(x(a.played), y(a.running));
+		// 		}
+		// 	});
+		// 	context2.stroke();
+  //  			context2.closePath();
 
-			context2.strokeStyle = point.values[0].Player in oc(colours.domain()) ? colours(point.values[0].Player):'#43423e';
-			context2.lineWidth = point.values[0].Player in oc(highlight) ? 4:2;
-			context2.beginPath();
-			context2.lineCap == 'round';
-			point.values.forEach(function(a,b){
-				if(b==0 || a==(point.values.length-1)){
-					context2.moveTo(x(a.played), y(a.running))
-				}else{
-					var prev = point.values[(b-1)];
-					context2.lineTo(x(a.played), y(prev.running));
-					context2.lineTo(x(a.played), y(a.running));
-				}
-			});
-			context2.stroke();
-   			context2.closePath();
+		// 	context2.strokeStyle = point.values[0].Player in oc(colours.domain()) ? colours(point.values[0].Player):'#74736c';
+		// 	context2.lineWidth = point.values[0].Player in oc(highlight) ? 4:2;
+		// 	context2.beginPath();
+		// 	context2.lineCap == 'round';
+		// 	point.values.forEach(function(a,b){
+		// 		if(b==0 || a==(point.values.length-1)){
+		// 			context2.moveTo(x(a.played), y(a.running))
+		// 		}else{
+		// 			var prev = point.values[(b-1)];
+		// 			context2.lineTo(x(a.played), y(prev.running));
+		// 			context2.lineTo(x(a.played), y(a.running));
+		// 		}
+		// 	});
+		// 	context2.stroke();
+  //  			context2.closePath();
 
-   			context2.beginPath();
-			context2.arc(x(point.played), y(point.max), (point.values[0].Player in oc(highlight) ? r+2:r) , 0, 2 * Math.PI, true);
-			context2.fillStyle = point.values[0].Player in oc(colours.domain()) ? textColours(point.values[0].Player):'#43423e';
-			context2.strokeStyle = '#fff1e0';
-			context2.lineWidth = 1;
-			context2.fill();
-			context2.stroke();
-			context2.closePath();
+  //  			context2.beginPath();
+		// 	context2.arc(x(point.played), y(point.max), (point.values[0].Player in oc(highlight) ? r+2:r) , 0, 2 * Math.PI, true);
+		// 	context2.fillStyle = point.values[0].Player in oc(colours.domain()) ? textColours(point.values[0].Player):'#74736c';
+		// 	context2.strokeStyle = '#fff1e0';
+		// 	context2.lineWidth = 1;
+		// 	context2.fill();
+		// 	context2.stroke();
+		// 	context2.closePath();
 			}
 		})
 		.on('mouseleave', function(){
-			anchor.html('');
-			context2.clearRect(0,0,(plotW * devicePixelRatio),(plotH * devicePixelRatio));
+			highlightPath('V Kohli');
+			d3.selectAll('#scatters .anchor').html('');
+			// context2.clearRect(0,0,(plotW * devicePixelRatio),(plotH * devicePixelRatio));
 		});
 
 		// Custom, story-specific bits start here
@@ -447,13 +477,66 @@ function runUp(frame,data){
 			'clip-path':'url(#plot)'
 		});
 
-		// var clubs = graphics.selectAll('g.club').data(function(d){return d});
-		// clubs.enter().append('g.club');
-
 		var line = d3.svg.line()
-			.interpolate('step-after')
-			.x(function(d){return x(d.gamesIn)})
-			.y(function(d){return y(d.rollingSum)});
+			.interpolate('linear')
+			.x(function(d){return x(d.sr)})
+			.y(function(d){return y(d.batAve)});
+
+		data.forEach(function(d,i){
+			d.line = line(d.values);
+			d.values.forEach(function(a,b){
+				a.h = x(a.sr);
+				a.v = y(a.batAve);
+			})
+		});
+
+		function highlightPath(player){
+
+			d3.selectAll('#scatters g.graphics').selectAll('g.group').remove();
+
+			var groups = d3.selectAll('#scatters g.graphics').selectAll('g.group').data(function(d){return d.filter(function(a,b){
+				return a.key == player
+			})});
+			groups.enter().append('g.group');
+
+			var backLines = groups.append('path.backLine')
+			.attr({
+				d:function(d){return d.line}
+			})
+			.style({
+				fill:'none',
+				stroke:'#fff1e0',
+				'stroke-width':5
+			});
+
+			var lines = groups.append('path.line')
+			.attr({
+				d:function(d){return d.line}
+			})
+			.style({
+				fill:'none',
+				stroke:player in oc(highlight) ? colours(player):'#43423e',
+				'stroke-width':3,
+				'marker-end':player in oc(highlight) ? 'url(#arrow'+(player.replace(/ /g,''))+')':'url(#arrowNull)'
+			});
+
+			var labs = groups.selectAll('text.lab').data(function(d,i){
+				return d.values.filter(function(a,b){
+					return b in oc([0,d.values.length-1])	
+				})
+			}).enter()
+				.append('text.lab.shadow.fine')
+				.attr({
+					x:function(d){return d.h},
+					y:function(d){return d.v}
+				})
+				.style({
+					'font-weight':500
+				})
+				.html(function(d){return d.year});
+		}
+
+		highlightPath('V Kohli');
 
 		// colours.domain(highlight);
 
@@ -463,125 +546,72 @@ function runUp(frame,data){
 			context.scale(devicePixelRatio, devicePixelRatio);
 
 			d.forEach(function(c){
-				context.strokeStyle = '#fff1e0';
-				context.lineWidth = c.values[0].Player in oc(highlight) ? 4:2;
-				context.beginPath();
-				context.lineCap == 'round';
-				c.values.forEach(function(a,b){
-					if(b==0 || a==(c.values.length-1)){
-						context.moveTo(x(a.played), y(a.running))
-					}else{
-						var prev = c.values[(b-1)];
-						context.lineTo(x(a.played), y(prev.running));
-						context.lineTo(x(a.played), y(a.running));
-					}
-				});
-				context.stroke();
-	   			context.closePath();
+		// 		context.strokeStyle = '#fff1e0';
+		// 		context.lineWidth = c.values[0].Player in oc(highlight) ? 4:2;
+		// 		context.beginPath();
+		// 		context.lineCap == 'round';
+		// 		c.values.forEach(function(a,b){
+		// 			if(b==0 || a==(c.values.length-1)){
+		// 				context.moveTo(x(a.played), y(a.running))
+		// 			}else{
+		// 				var prev = c.values[(b-1)];
+		// 				context.lineTo(x(a.played), y(prev.running));
+		// 				context.lineTo(x(a.played), y(a.running));
+		// 			}
+		// 		});
+		// 		context.stroke();
+	 //   			context.closePath();
 
-	   			context.strokeStyle = c.values[0].Player in oc(colours.domain()) ? colours(c.values[0].Player):'#bfb0b0';
-				context.lineWidth = c.values[0].Player in oc(highlight) ? 2:1;
-				context.beginPath();
-				context.lineCap == 'round';
-				c.values.forEach(function(a,b){
-					if(b==0 || a==(c.values.length-1)){
-						context.moveTo(x(a.played), y(a.running))
-					}else{
-						var prev = c.values[(b-1)];
-						context.lineTo(x(a.played), y(prev.running));
-						context.lineTo(x(a.played), y(a.running));
-					}
-				});
-				context.stroke();
-	   			context.closePath();
+	 //   			context.strokeStyle = c.values[0].Player in oc(colours.domain()) ? colours(c.values[0].Player):'#bfb0b0';
+		// 		context.lineWidth = c.values[0].Player in oc(highlight) ? 2:1;
+		// 		context.beginPath();
+		// 		context.lineCap == 'round';
+		// 		c.values.forEach(function(a,b){
+		// 			if(b==0 || a==(c.values.length-1)){
+		// 				context.moveTo(x(a.played), y(a.running))
+		// 			}else{
+		// 				var prev = c.values[(b-1)];
+		// 				context.lineTo(x(a.played), y(prev.running));
+		// 				context.lineTo(x(a.played), y(a.running));
+		// 			}
+		// 		});
+		// 		context.stroke();
+	 //   			context.closePath();
 			});
 
 			d.forEach(function(c){
-				context.beginPath();
-				context.arc(x(c.played), y(c.max), (c.values[0].Player in oc(highlight) ? r:r-1) , 0, 2 * Math.PI, true);
-				context.fillStyle = c.values[0].Player in oc(colours.domain()) ? textColours(c.values[0].Player):'#bfb0b0';
-				context.strokeStyle = '#fff1e0';
-				context.lineWidth = 1;
-				context.fill();
-				context.stroke();
-				context.closePath();
+				c.values.forEach(function(f){
+					context.beginPath();
+					context.arc(x(f.sr), y(f.batAve), (f.Player in oc(highlight) ? r:r-1) , 0, 2 * Math.PI, true);
+					context.fillStyle = f.Player in oc(colours.domain()) ? textColours(f.Player):'#bfb0b0';
+					context.strokeStyle = '#fff1e0';
+					context.lineWidth = 1;
+					context.fill();
+					context.stroke();
+					context.closePath();
+				})
 			});
 
 		});
-
-		// var outLines = clubs.append('path')
-		// 	.attr({
-		// 		d:function(d){return line(d.values)},
-		// 		fill:'none',
-		// 		stroke:'#fff1e0'
-		// 	})
-		// 	.style({
-		// 		'stroke-width':function(d){return d.key in oc(highlight) ? 4:2 }
-		// 	});
-
-		// var lines = clubs.append('path')
-		// 	.attr({
-		// 		d:function(d){return line(d.values)},
-		// 		fill:'none',
-		// 		stroke:function(d){return d.key in oc(highlight) ? colours(d.key):'#bfb0b0' }
-		// 	})
-		// 	.style({
-		// 		'stroke-width':function(d){return d.key in oc(highlight) ? 2:1},
-		// 	});
-
-		// var pointHolders = graphics.selectAll('g.pointHolder').data(function(d){return d});
-		// pointHolders.enter().append('g.pointHolder');
-
-		// var dots = pointHolders.append('circle')
-		// 	.attr({
-		// 		cx:function(d){return x(d.played)},
-		// 		cy:function(d){return y(d.max)},
-		// 		r:function(d){return d.key in oc(highlight) ? r:r-1 },
-		// 		fill:function(d){return d.key in oc(highlight) ? textColours(d.key):'#bfb0b0' },
-		// 		stroke:'#fff1e0'
-		// 	});
-
-		// var labs = clubs.filter(function(d,i){return d.key in oc(highlight)})
-		// 	.append('g.lab')
-		// 	.translate(function(d){return [x(d.played),y(d.max)]})
-		// 	.append('text')
-		// 	.html(function(d){return d.key});
-
-
-		// var labs = plots.append('g.legBox').translate([25,25])
-		// 	.selectAll('g.lab').data(data.filter(function(d){return d.key in oc(highlight)}).sort(function(a,b){return b.max-a.max}))
-		// 	.enter().append('g.lab')
-		// 	.translate(function(d,i){return [95-[-5,10,35][i],i*17]});
-		// labs.append('text.shadow').html(function(d){return d.key
-		// 	.replace(/City-/g,"")
-		// 	.replace(/Town-/g,"")
-		// 	.replace(/ield |nesday-/g," ")
-		// 	.replace(/[0-9]/g,"")
-		// 	+ d.start.getFullYear() + '-' + (d.start.getFullYear()+1).toString().substr(2,3) + ': ' + d.max + 'pts'
-		// })
-		// .style({
-		// 	fill:function(d){return textColours(d.key)},
-		// 	'font-size':14
-		// });
 
 		// JBM annotations here
 
 		var annos = [
 			{	
 				key:highlight[0],
-				point:[27.8,1610],
-				text:"Kohli is just short of Gayle's 2015 record, but has got there more quickly due to greater consistency",
-				textPoint:[-55,30],
+				point:[26.7,1560],
+				text:"Kohli lies just behind Gayle's 2015 record, but has scored at a faster rate",
+				textPoint:[-40,10],
 				anchor:'end',
 				side:1
 			},
 			{	
 				key:highlight[1],
-				point:[36,1665],
+				point:[36.4,1665],
 				text:"Last year Gayle reached 1,665 runs in 36 innings",
-				textPoint:[-15,-30],
+				textPoint:[30,0],
 				anchor:'start',
-				side:-1
+				side:1
 			},
 		];
 
